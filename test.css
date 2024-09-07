@@ -1,0 +1,122 @@
+body {
+    font-family: 'NSimSun', 'KaiTi', 'Microsoft YaHei', 'SimSun', Arial, sans-serif;
+    margin: 40px;
+    background-image: url('images/background.jpg'); 
+    background-size: cover; 
+    background-position: center; 
+    background-repeat: no-repeat; 
+    font-weight: bold; 
+    font-size: 2rem;
+}
+
+h1 {
+    text-align: center;
+    color: #333;
+    font-weight: bold; 
+    font-size: 2rem;
+}
+
+#question {
+    margin-bottom: 20px;
+    font-size: 1.25rem;
+    color: #333;
+    text-align: center;
+    font-weight: bold;
+}
+
+.options-3d-container {
+    perspective: 1000px;
+    margin: 20px auto; 
+    width: 25%; 
+    max-width: 600px; 
+}
+
+.option-container {
+    background: #f0f0f0; 
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2); 
+    padding: 10px;
+    margin: 10px 0;
+    transform-style: preserve-3d; 
+    transition: transform 0.5s; 
+    width: 100%; 
+}
+
+
+.option-container:hover {
+    transform: rotateY(10deg) rotateX(10deg); 
+}
+
+.option-container label {
+    display: flex;
+    align-items: center;
+    font-size: 1rem;
+    color: #444;
+    margin: 5px 0; 
+    font-weight: bold;
+}
+
+.option-container input[type="radio"] {
+    margin-right: 10px;
+    accent-color: #007bff; 
+    border: 1px solid #007bff; 
+    border-radius: 50%;
+}
+
+.button-container {
+    display: flex;
+    justify-content: center; 
+    gap: 10px; 
+    margin-top: 20px; 
+}
+
+.button-container button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    background-color: #007bff;
+    color: white;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: bold;
+}
+
+.button-container button:hover {
+    background-color: #0056b3;
+}
+
+button {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    margin: 5px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: bold;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+
+#showResultButton {
+    display: none;
+}
+
+#progress-container {
+    width: 25%;
+    max-width: 600px;
+    background-color: #e0e0e0;
+    border-radius: 5px;
+    margin: 20px auto; 
+    height: 6px;
+}
+#progress-bar {
+    height: 100%;
+    width: 0;
+    background-color: #007bff;
+    border-radius: 5px;
+    transition: width 0.3s; 
+}
