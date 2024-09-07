@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>问卷调查</title>
+    <link rel="stylesheet" href="test.css">
+</head>
+<body>
+    <h1>问卷调查</h1>
+    <div id="question"></div>
+    <div class="options-3d-container">
+        <div class="option-container">
+            <label><input type="radio" name="option" value="0"> <span id="textA"></span></label>
+        </div>
+        <div class="option-container">
+            <label><input type="radio" name="option" value="1"> <span id="textB"></span></label>
+        </div>
+        <div class="option-container">
+            <label><input type="radio" name="option" value="2"> <span id="textC"></span></label>
+        </div>
+        <div class="option-container">
+            <label><input type="radio" name="option" value="3"> <span id="textD"></span></label>
+        </div>
+    </div>
+
+    <div id="progress-container">
+        <div id="progress-bar"></div>
+    </div>
+
+    <div class="button-container">
+        <button id="prev">上一题</button>
+        <button id="next">下一题</button>
+        <button type="button" id="showResultButton" style="display: none;">揭晓你的专属酒</button>
+    </div>
+
+    <script src="script.js"></script>
+    <script src="function.js"></script>
+</body>
+</html>
