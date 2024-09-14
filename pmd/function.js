@@ -189,6 +189,7 @@ function recommendWine(Ans) {
         }
     }
 
+    localStorage.setItem('score', JSON.stringify(score));
     const recommendedWine = wineProfiles[minIndex].name;
     return recommendedWine;
 }
