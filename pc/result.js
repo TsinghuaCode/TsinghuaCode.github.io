@@ -61,12 +61,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 scoreOverlay.innerHTML = `
                     <div style="font-size: 16px; font-weight: bold; margin-bottom: 5px;">指标:</div>
                     <div style="display: flex; flex-wrap: wrap; gap: 10px;">
-                        <div><strong>甜度:</strong> ${sweetness}</div>
-                        <div><strong>酸度:</strong> ${acidity}</div>
-                        <div><strong>酒体:</strong> ${body}</div>
-                        <div><strong>单宁:</strong> ${tannins}</div>
-                        <div><strong>酒精度:</strong> ${alcoholContent}</div>
-                        <div><strong>香气复杂度:</strong> ${aromaComplexity}</div>
+                        <div><strong>甜度:</strong> ${sweetness.toFixed(2)}</div>
+                        <div><strong>酸度:</strong> ${acidity.toFixed(2)}</div>
+                        <div><strong>酒体:</strong> ${body.toFixed(2)}</div>
+                        <div><strong>单宁:</strong> ${tannins.toFixed(2)}</div>
+                        <div><strong>酒精度:</strong> ${alcoholContent.toFixed(2)}</div>
+                        <div><strong>香气复杂度:</strong> ${aromaComplexity.toFixed(2)}</div>
                     </div>`;
 
                 scoreOverlay.style.top = '10px';
