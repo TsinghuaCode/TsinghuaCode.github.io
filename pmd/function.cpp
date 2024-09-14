@@ -188,12 +188,14 @@ std::string recommendWine(std::vector<int> Ans) {
     // score归一化
     double max_score = 0;
     for (int i = 0; i < 6; i++) {
-        if (score[i] > max_score) {
-            max_score = score[i];
+        if (fabs(score[i]) > max_score) {
+            max_score = fabs(score[i]);
         }
     }
     for (int i = 0; i < 6; i++) {
         score[i] /= max_score;
+        score[i] += 1;
+        score[i] /= 2.0;
     }
 
     // 计算与28种酒的欧几里得距离
