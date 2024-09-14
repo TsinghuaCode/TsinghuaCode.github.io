@@ -156,13 +156,15 @@ function recommendWine(Ans) {
     // score归一化
     let maxScore = 0;
     for (let i = 0; i < 6; i++) {
-        if (score[i] > maxScore) {
-            maxScore = score[i];
+        if (Math.abs(score[i]) > maxScore) {
+            maxScore = Math.abs(score[i]);
         }
     }
     
     for (let i = 0; i < 6; i++) {
         score[i] /= maxScore;
+        score[i] += 1.0;
+        score[i] /= 2.0;
     }
     
     console.log('Normalized scores:', score);
