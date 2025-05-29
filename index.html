@@ -6,6 +6,31 @@
     <title>不确定服务能力下的“随大流”行为 - 交互式报告</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- 新增MathJax代码 -->
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>
+        // MathJax配置
+        MathJax.config = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']], // 行内公式
+                displayMath: [['$$', '$$'], ['\\[', '\\]']], // 块级公式
+                processEscapes: true,
+                packages: {'[+]': ['ams', 'physics']} // 加载额外包（如AMS数学符号、物理符号）
+            },
+            svg: {
+                fontCache: 'global' // 优化SVG渲染性能
+            },
+            // 可添加公式渲染后的回调函数
+            startup: {
+                typeset: false // 不自动渲染，手动控制
+            }
+        };
+        
+        // 页面加载完成后初始化MathJax
+        window.addEventListener('load', () => {
+            MathJax.startup.typeset();
+        });
+    </script>
     <!-- Application Structure Plan: 
         The SPA is structured into thematic sections accessible via a top navigation bar.
         1.  **概述与模型 (Overview & Model):** Introduces the research, key questions, and the core queueing model. Allows users to set global model parameters (μH, μL, γ, λ, R, C) via sliders/inputs. These parameters will dynamically influence calculations and visualizations throughout the application.
@@ -46,6 +71,7 @@
         .interactive-note { font-size: 0.8rem; color: #555; margin-top:0.5rem; font-style: italic;}
     </style>
 </head>
+    
 <body class="bg-slate-50 text-slate-700">
 
     <header class="bg-sky-700 text-white p-6 shadow-md">
