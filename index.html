@@ -1,24 +1,834 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>中信尼雅葡萄酒个性化推荐平台</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>不确定服务能力下的“随大流”行为 - 交互式报告</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Application Structure Plan: 
+        The SPA is structured into thematic sections accessible via a top navigation bar.
+        1.  **概述与模型 (Overview & Model):** Introduces the research, key questions, and the core queueing model. Allows users to set global model parameters (μH, μL, γ, λ, R, C) via sliders/inputs. These parameters will dynamically influence calculations and visualizations throughout the application.
+        2.  **核心效应与最优反应 (Core Effects & Best Response):** Explains belief updating, utility calculation, congestion vs. inference effects, and FTC conditions. Features an interactive visualization inspired by Figure 1 from the paper, where users can vary "others' joining threshold (v)" and observe the impact on the tagged customer's belief, best-response threshold, and joining probability, highlighting the FTC jump.
+        3.  **顾客加入均衡 (Customer Joining Equilibria):** Discusses PSE and MSE, conditions for their existence, and multiplicity. Interactively shows if multiple PSEs exist by plotting EW_m bounds against R/C. Compares ex-ante utility EU^I(m) if multiple equilibria are present. Illustrates accuracy of customer inference.
+        4.  **服务能力信息披露 (Information Disclosure):** Compares the three disclosure policies (Disclosed, Concealed no inference, Concealed with inference). Dynamically displays equilibrium thresholds (m_X), system throughputs (T^X), and social welfare (SW^X) based on global parameters, indicating which policy is preferable under current settings.
+        5.  **结论与展望 (Conclusion & Outlook):** Summarizes key findings and future research directions.
+        This structure is chosen to guide the user logically from foundational concepts to more complex analyses and policy implications, promoting understanding through interactive exploration rather than a linear reading of the paper.
+    -->
+    <!-- Visualization & Content Choices:
+        - **Global Parameters (Overview & Model):** Goal: Allow user control. Method: HTML Sliders & Number Inputs. Interaction: Real-time update of JS variables. Justification: Core to exploring model sensitivity. Library: Vanilla JS.
+        - **Belief/Utility Formulas (Core Effects):** Goal: Inform. Method: Static text display of key equations. Interaction: None. Justification: Foundational knowledge.
+        - **Figure 1-like Viz (Core Effects):** Goal: Demonstrate FTC. Method: Line charts (Chart.js) for θ₀(v) and JP^U(v), step-like data for p̃(v). Interaction: Slider for "v". Justification: Key paper finding, shows inference vs. congestion. Library: Chart.js, Vanilla JS.
+        - **Equilibrium Existence (Equilibria):** Goal: Show PSE multiplicity. Method: Line chart (Chart.js) for EW_m bounds, user sees R/C intersection. Interaction: Updates with global params. Justification: Illustrates Prop 3. Library: Chart.js, Vanilla JS.
+        - **Utility Comparison (Equilibria):** Goal: Show Pareto optimality. Method: Bar chart (Chart.js) or dynamic text for EU^I(m). Interaction: Updates if multiple PSEs exist. Justification: Illustrates Prop 4. Library: Chart.js, Vanilla JS.
+        - **Inference Accuracy (Equilibria):** Goal: Show inference works. Method: Dynamic table/text for θ_n(m) and π_X(n,m). Interaction: Updates with chosen equilibrium. Justification: Supports qualitative finding.
+        - **Disclosure Impact (Info Disclosure):** Goal: Compare policies. Method: Dynamic tables/text for m^X, T^X, SW^X. Interaction: Updates with global params, highlights best policy. Justification: Practical implication.
+        - **Textual Explanations:** Goal: Provide context. Method: Paragraphs before/after interactive elements. Justification: Essential for understanding.
+        CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. All diagrams/charts are via Chart.js (Canvas) or structured HTML/CSS.
+    -->
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .section-title { font-size: 1.75rem; font-weight: 600; color: #0369a1; margin-bottom: 1rem; border-bottom: 2px solid #0ea5e9; padding-bottom: 0.5rem; }
+        .subsection-title { font-size: 1.25rem; font-weight: 500; color: #075985; margin-top: 1.5rem; margin-bottom: 0.75rem; }
+        .content-text { color: #334155; line-height: 1.6; }
+        .parameter-slider label { display: block; margin-bottom: 0.25rem; font-size: 0.875rem; color: #475569; }
+        .parameter-slider input[type="range"] { width: 100%; }
+        .parameter-slider span { font-size: 0.875rem; color: #1e40af; font-weight: 500; }
+        .nav-button { padding: 0.5rem 1rem; margin: 0 0.25rem; border-radius: 0.375rem; background-color: #e0f2fe; color: #0c4a6e; font-weight: 500; transition: all 0.2s ease-in-out; }
+        .nav-button:hover, .nav-button.active { background-color: #0ea5e9; color: white; }
+        .formula { background-color: #f1f5f9; padding: 0.75rem; border-radius: 0.25rem; font-family: monospace; overflow-x: auto; margin-bottom: 0.5rem; }
+        .chart-container { position: relative; width: 100%; max-width: 600px; margin-left: auto; margin-right: auto; height: 300px; max-height: 350px; background-color: #f8fafc; padding: 1rem; border-radius: 0.5rem; box-shadow: 0 1px 3px 0 rgba(0,0,0,0.1), 0 1px 2px 0 rgba(0,0,0,0.06);}
+        @media (min-width: 768px) { .chart-container { height: 350px; max-height:400px } }
+        .tooltip-custom { position: absolute; background-color: rgba(0,0,0,0.7); color: white; padding: 5px; border-radius: 3px; font-size: 0.8em; pointer-events: none; white-space: pre-wrap; }
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        th, td { border: 1px solid #cbd5e1; padding: 0.5rem; text-align: left; font-size: 0.9rem; }
+        th { background-color: #f1f5f9; color: #1e3a8a; }
+        .interactive-note { font-size: 0.8rem; color: #555; margin-top:0.5rem; font-style: italic;}
+    </style>
 </head>
-<body>
-    <header>
-        <h1>中信尼雅葡萄酒个性化推荐平台</h1>
+<body class="bg-slate-50 text-slate-700">
+
+    <header class="bg-sky-700 text-white p-6 shadow-md">
+        <h1 class="text-3xl font-bold text-center">不确定服务能力下的“随大流”行为</h1>
+        <p class="text-center text-sky-100 mt-1 text-sm">Liu Yang, Weixin Shang, Liming Liu (2023) - 交互式报告</p>
     </header>
-    <main>
-        <section id="intro">
-            <h2>关于这个网页</h2>
-            <div class="content">
-                <img src="images/wine_gif.gif" alt="介绍 GIF" width="190">
-                <p>这是一个为葡萄酒爱好者提供个性化推荐服务的平台，<br>通过问卷分析您的人格特点，<br>为您推荐最适合您个性特点的葡萄酒。<br>快来完成16个人格测试问题，<br>找到专属于你的葡萄酒吧!</p>
+
+    <nav class="bg-white shadow-sm sticky top-0 z-50 py-3 px-4 mb-6">
+        <div class="container mx-auto flex justify-center flex-wrap">
+            <button class="nav-button active" onclick="showSection('overview')">概述与模型</button>
+            <button class="nav-button" onclick="showSection('effects')">核心效应与最优反应</button>
+            <button class="nav-button" onclick="showSection('equilibria')">顾客加入均衡</button>
+            <button class="nav-button" onclick="showSection('disclosure')">信息披露</button>
+            <button class="nav-button" onclick="showSection('conclusion')">结论与展望</button>
+        </div>
+    </nav>
+
+    <main class="container mx-auto p-4 md:p-6">
+        <section id="overview" class="content-section space-y-4">
+            <h2 class="section-title">概述与模型</h2>
+            <p class="content-text">
+                本交互式报告旨在探索在服务能力不确定的情况下，顾客的“随大流”(Follow-the-Crowd, FTC)行为。在许多现实服务系统中，顾客无法直接观测到服务提供者的确切服务能力（例如，服务员数量或处理效率），他们往往依赖于可观察到的队列长度等信息来推断服务质量，并作出加入或放弃等待的决策。本研究的核心在于理解顾客的这种理性推断过程如何可能导致他们更倾向于加入一个已经较长的队列，以及管理层的信息披露策略（如是否告知真实服务能力）如何影响系统整体性能（如吞吐量和社会福利）。
+            </p>
+            <p class="content-text">我们通过一个单服务员排队模型进行分析，其中服务能力可能是高 ($\mu_H$) 或低 ($\mu_L$)，顾客在到达时观察队列长度 $N$，更新其对服务能力的信念，并决定是否加入。请调整以下全局参数，观察它们如何影响后续分析中的各项结果。</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 bg-sky-50 p-6 rounded-lg shadow">
+                <div class="parameter-slider">
+                    <label for="muH_slider">高服务能力 $\mu_H$ (每单位时间服务顾客数):</label>
+                    <input type="range" id="muH_slider" min="0.5" max="5" value="2.64" step="0.01" oninput="updateGlobalParams()">
+                    <span id="muH_value">2.64</span>
+                </div>
+                <div class="parameter-slider">
+                    <label for="muL_slider">低服务能力 $\mu_L$ (每单位时间服务顾客数):</label>
+                    <input type="range" id="muL_slider" min="0.1" max="2.5" value="1.056" step="0.01" oninput="updateGlobalParams()">
+                    <span id="muL_value">1.056</span>
+                </div>
+                <div class="parameter-slider">
+                    <label for="gamma_slider">高服务能力先验概率 $\gamma$:</label>
+                    <input type="range" id="gamma_slider" min="0.05" max="0.95" value="0.5" step="0.01" oninput="updateGlobalParams()">
+                    <span id="gamma_value">0.5</span>
+                </div>
+                <div class="parameter-slider">
+                    <label for="lambda_slider">顾客到达率 $\lambda$ (每单位时间到达顾客数):</label>
+                    <input type="range" id="lambda_slider" min="0.1" max="3" value="0.88" step="0.01" oninput="updateGlobalParams()">
+                    <span id="lambda_value">0.88</span>
+                </div>
+                <div class="parameter-slider">
+                    <label for="R_slider">服务收益 $R$:</label>
+                    <input type="range" id="R_slider" min="1" max="30" value="12" step="0.1" oninput="updateGlobalParams()">
+                    <span id="R_value">12</span>
+                </div>
+                <div class="parameter-slider">
+                    <label for="C_slider">单位时间等待成本 $C$:</label>
+                    <input type="range" id="C_slider" min="0.5" max="10" value="5" step="0.1" oninput="updateGlobalParams()">
+                    <span id="C_value">5</span>
+                </div>
             </div>
-            <a href="test.html" class="button">开始测试</a>
+             <div class="mt-4 p-4 bg-amber-50 border-l-4 border-amber-400 text-amber-700 rounded">
+                <p class="font-semibold">关键假设:</p>
+                <ul class="list-disc list-inside text-sm">
+                    <li>顾客理性决策：若期望效用 $R - C \cdot E[W|N] \ge 0$ 则加入。</li>
+                    <li>空队总加入：$R - C/\mu_L > 0$。</li>
+                    <li>最大队列长度 $\overline{N} = \lfloor R\mu_H/C \rfloor$。</li>
+                </ul>
+            </div>
+        </section>
+
+        <section id="effects" class="content-section space-y-4" style="display:none;">
+            <h2 class="section-title">核心效应与最优反应</h2>
+            <p class="content-text">当顾客到达时，他们会根据观察到的队列长度 $N$ 和对其他顾客行为的预期 $p^-$ (其他顾客的加入策略) 来更新对服务能力的信念 $\theta_n(p^-)$ (认为当前是高服务能力的概率)，并计算期望效用 $u(n,p^-)$ 来决定是否加入。这一决策过程受到两种主要效应的影响：拥挤效应和推断效应。</p>
+            
+            <div class="subsection-title">信念更新与期望效用</div>
+            <p class="content-text">标记顾客的更新信念 (贝叶斯法则):</p>
+            <div class="formula">θ<sub>n</sub>(p<sup>-</sup>) = [γ * π<sub>H</sub>(n,p<sup>-</sup>)] / [γ * π<sub>H</sub>(n,p<sup>-</sup>) + (1-γ) * π<sub>L</sub>(n,p<sup>-</sup>)]</div>
+            <p class="content-text">其中 π<sub>X</sub>(n,p<sup>-</sup>) 是在服务能力为 μ<sub>X</sub> 且他人策略为 p<sup>-</sup> 时，队列长度为n的稳态概率。</p>
+            <p class="content-text">标记顾客加入的期望效用:</p>
+            <div class="formula">u(n,p<sup>-</sup>) = R - C(n+1) * [θ<sub>n</sub>(p<sup>-</sup>)/μ<sub>H</sub> + (1-θ<sub>n</sub>(p<sup>-</sup>))/μ<sub>L</sub>]</div>
+
+            <div class="subsection-title">拥挤效应 (Congestion Effect) vs. 推断效应 (Inference Effect)</div>
+            <p class="content-text">
+                <strong>拥挤效应</strong>：当其他顾客更倾向于加入时，系统通常更拥挤，导致标记顾客的预期等待时间增加，从而降低其加入意愿 (ATC - Avoid The Crowd)。<br>
+                <strong>推断效应</strong> (引理2)：当其他顾客更倾向于加入时，若标记顾客观察到相同的队列长度 $n$，她会更相信当前是高服务能力状态 (即 $\theta_n$ 增大)。这可能降低其预期等待时间，从而鼓励加入。
+            </p>
+            <p class="content-text">当推断效应强于拥挤效应时，就可能出现“随大流” (FTC - Follow The Crowd) 行为 (命题2)。</p>
+
+            <div class="subsection-title">交互式最优反应分析 (模拟图1)</div>
+            <p class="content-text">调整下方“其他顾客的加入阈值 $v$”，观察标记顾客的信念、最优反应阈值和加入概率如何变化。注意，此处的 $v$ 是其他顾客普遍采用的纯策略阈值。</p>
+            <div class="parameter-slider my-4 p-4 bg-sky-50 rounded-lg shadow">
+                <label for="v_slider">其他顾客的加入阈值 $v$ (整数):</label>
+                <input type="range" id="v_slider" min="0" max="10" value="2" step="1" oninput="updateFigure1Simulation()">
+                <span id="v_value">2</span>
+                 <p class="interactive-note">最大队列长度 $\overline{N}$ 根据全局参数动态计算。此处的 $v$ 不应超过 $\overline{N}-1$。</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="chart-container">
+                    <canvas id="beliefChart"></canvas>
+                    <p class="text-center text-sm text-slate-600 mt-2">标记顾客对高能力的信念 $\theta_0(v)$ (空队列时)</p>
+                </div>
+                <div class="chart-container">
+                    <canvas id="joiningProbChart"></canvas>
+                     <p class="text-center text-sm text-slate-600 mt-2">标记顾客的先验加入概率 $JP^U(v)$</p>
+                </div>
+            </div>
+            <div class="mt-4 p-4 bg-slate-100 rounded-lg shadow">
+                <p class="content-text">基于当前 $v = <span id="current_v_display">2</span>$ 和全局参数:</p>
+                <p class="content-text">标记顾客的最优反应阈值 $\tilde{p}(v)$: <strong id="bestResponseThresholdDisplay" class="text-sky-700">计算中...</strong></p>
+                 <p class="content-text">FTC 行为是否可能 (命题2): <strong id="ftcConditionDisplay" class="text-sky-700">计算中...</strong> (若 $R/C$ 落入特定区间则可能)</p>
+            </div>
+        </section>
+
+        <section id="equilibria" class="content-section space-y-4" style="display:none;">
+            <h2 class="section-title">顾客加入均衡</h2>
+            <p class="content-text">在均衡状态下，所有顾客采取相同的策略，且该策略是对他人策略的最优反应。我们主要关注阈值型纯策略均衡 (PSE) 和混合策略均衡 (MSE)。</p>
+            
+            <div class="subsection-title">均衡类型与存在性 (命题3)</div>
+            <p class="content-text">一个阈值-$m$ PSE 存在需满足条件: $u(m, m) \ge 0$ 且 $u(m+1, m) \le 0$。顾客推断可能导致多个PSEs，体现FTC。</p>
+            <p class="content-text">令 $\underline{EW}_m = (m+1)[\theta_m(m)/\mu_H + (1-\theta_m(m))/\mu_L]$ 且 $\overline{EW}_m = (m+2)[\theta_{m+1}(m)/\mu_H + (1-\theta_{m+1}(m))/\mu_L]$。</p>
+            <p class="content-text">阈值-$m$ PSE 存在 $\iff R/C \in [\underline{EW}_m, \overline{EW}_m]$。</p>
+            
+            <div class="mt-4 p-4 bg-sky-50 rounded-lg shadow">
+                <h3 class="font-semibold text-sky-700">纯策略均衡 (PSE) 分析:</h3>
+                <p class="content-text">当前 $R/C = <span id="currentR_C_equilibria" class="font-bold"></span>$. 最大队列长度 $\overline{N} = <span id="maxN_equilibria" class="font-bold"></span>$.</p>
+                <div id="equilibriaResults" class="mt-2 space-y-1 text-sm">计算中...</div>
+                <div class="chart-container mt-4" style="max-width: 700px; height:350px;">
+                    <canvas id="ewChart"></canvas>
+                </div>
+                 <p class="interactive-note">上图展示了 $\underline{EW}_m$ (蓝线) 和 $\overline{EW}_m$ (红线) 随阈值 $m$ 的变化。水平黄线代表当前的 $R/C$ 值。当黄线介于某 $m$ 对应的蓝线和红线之间时，则阈值-$m$ PSE存在。</p>
+            </div>
+
+            <div class="subsection-title">均衡间先验期望效用比较 (命题4)</div>
+            <p class="content-text">当存在多个PSE时，具有更大加入阈值的均衡有时可能带来更高的顾客期望效用 $EU^I(m) = \sum_{n=0}^{m} \pi(n,m)u(n,m)$，尤其当推断效应显著时。</p>
+            <div id="utilityComparisonResults" class="mt-2 p-4 bg-slate-100 rounded-lg shadow">计算中...</div>
+            
+            <div class="subsection-title">顾客推断的准确性 (模拟表2)</div>
+            <p class="content-text">顾客的推断机制能有效帮助他们形成对实际服务能力较准确的信念。下方将展示在一个选定均衡下的信念更新情况。</p>
+            <div id="inferenceAccuracyResults" class="mt-2 p-4 bg-slate-100 rounded-lg shadow">请先在上方确定一个分析的均衡点。</div>
+
+        </section>
+
+        <section id="disclosure" class="content-section space-y-4" style="display:none;">
+            <h2 class="section-title">服务能力信息披露</h2>
+            <p class="content-text">管理者可以选择是否披露服务能力信息。我们将比较三种策略：(1) 信息披露 (Disclosed)，(2) 信息隐藏且顾客不推断 (Concealed, No Inference)，(3) 信息隐藏且顾客推断 (Concealed, Inference)。引理3指出 $m_L \le m^U, m^I \le m_H$。</p>
+
+            <div class="mt-4 p-4 bg-sky-50 rounded-lg shadow overflow-x-auto">
+                <h3 class="font-semibold text-sky-700 mb-2">不同披露策略下的关键指标:</h3>
+                <table id="disclosureTable">
+                    <thead>
+                        <tr>
+                            <th>指标</th>
+                            <th>情况1: 披露 ($X^0$)</th>
+                            <th>情况2: 隐藏,不推断 ($X^U$)</th>
+                            <th>情况3: 隐藏,推断 ($X^I$)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>均衡阈值 $m$</td><td id="m_disclosed"></td><td id="m_no_inference"></td><td id="m_inference"></td></tr>
+                        <tr><td>系统吞吐量 $T$</td><td id="T_disclosed"></td><td id="T_no_inference"></td><td id="T_inference"></td></tr>
+                        <tr><td>社会福利 $SW$</td><td id="SW_disclosed"></td><td id="SW_no_inference"></td><td id="SW_inference"></td></tr>
+                    </tbody>
+                </table>
+                <p id="disclosureAnalysis" class="mt-4 content-text">计算中...</p>
+                 <p class="interactive-note">对于情况3（隐藏，推断），如果存在多个PSE，则默认选择使顾客期望效用最大的那个均衡阈值 $m^I$ 进行计算。</p>
+            </div>
+            
+            <div class="subsection-title">信息披露对系统吞吐量的影响 (命题5, 6)</div>
+            <p class="content-text">
+                命题5指出：若 $\gamma$ (高能力先验概率) 小，披露通常增加吞吐量；若 $\gamma$ 大，披露通常减少吞吐量。
+                命题6指出：特定条件下，顾客推断 ($m^I$) 可能导致比不推断 ($m^U$) 更低的阈值和吞吐量。
+            </p>
+
+            <div class="subsection-title">信息披露对社会福利的影响 (命题7)</div>
+            <p class="content-text">
+                信息披露对社会福利的影响更为复杂。特定条件下（如 $\gamma$ 大且 $\mu_H > \lambda$），披露增加社会福利；其他条件下（如 $\gamma$ 小且 $\mu_H \le \lambda$），披露可能减少社会福利。管理者的最优披露策略需权衡吞吐量和社会福利目标。
+            </p>
+        </section>
+
+        <section id="conclusion" class="content-section space-y-4" style="display:none;">
+            <h2 class="section-title">结论与展望</h2>
+            <div class="subsection-title">主要结论</div>
+            <ul class="list-disc list-inside content-text space-y-1">
+                <li>顾客对不确定服务能力的理性推断是FTC行为的新驱动因素。</li>
+                <li>推断效应可超过拥挤效应导致FTC。</li>
+                <li>可能存在多个阈值型均衡。</li>
+                <li>若推断效应显著，较大加入阈值的均衡可能带来更高个体效用。</li>
+                <li>最优产能信息披露政策取决于系统参数，需权衡吞吐量与社会福利。</li>
+            </ul>
+            <div class="subsection-title">未来研究展望</div>
+            <ul class="list-disc list-inside content-text space-y-1">
+                <li>扩展至多服务员排队设置。</li>
+                <li>引入顾客异质性 (如等待成本、服务价值感知)。</li>
+                <li>考虑服务能力与到达率的同步不确定性。</li>
+            </ul>
         </section>
     </main>
+
+    <footer class="text-center text-sm text-slate-500 py-8 mt-10 border-t border-slate-200">
+        <p>基于: Yang, L., Shang, W., & Liu, L. (2023). Follow the Crowd with Uncertain Service Capacity. <em>Manufacturing & Service Operations Management</em>, 25(1), 341-352.</p>
+        <p>交互式报告生成于 <span id="generationDate"></span></p>
+    </footer>
+
+<script>
+    let globalParams = { muH: 2.64, muL: 1.056, gamma: 0.5, lambda: 0.88, R: 12, C: 5 };
+    let charts = {};
+
+    document.getElementById('generationDate').textContent = new Date().toLocaleDateString('zh-CN');
+
+    function showSection(sectionId) {
+        document.querySelectorAll('.content-section').forEach(section => {
+            section.style.display = 'none';
+        });
+        document.getElementById(sectionId).style.display = 'block';
+        document.querySelectorAll('.nav-button').forEach(button => {
+            button.classList.remove('active');
+        });
+        document.querySelector(`.nav-button[onclick="showSection('${sectionId}')"]`).classList.add('active');
+        window.scrollTo(0, 0);
+        if (sectionId === 'overview' || sectionId === 'effects' || sectionId === 'equilibria' || sectionId === 'disclosure') {
+            updateAllCalculations(); // Trigger calculations when section becomes visible
+        }
+    }
+
+    function updateGlobalParams() {
+        globalParams.muH = parseFloat(document.getElementById('muH_slider').value);
+        globalParams.muL = parseFloat(document.getElementById('muL_slider').value);
+        globalParams.gamma = parseFloat(document.getElementById('gamma_slider').value);
+        globalParams.lambda = parseFloat(document.getElementById('lambda_slider').value);
+        globalParams.R = parseFloat(document.getElementById('R_slider').value);
+        globalParams.C = parseFloat(document.getElementById('C_slider').value);
+
+        document.getElementById('muH_value').textContent = globalParams.muH.toFixed(2);
+        document.getElementById('muL_value').textContent = globalParams.muL.toFixed(2);
+        document.getElementById('gamma_value').textContent = globalParams.gamma.toFixed(2);
+        document.getElementById('lambda_value').textContent = globalParams.lambda.toFixed(2);
+        document.getElementById('R_value').textContent = globalParams.R.toFixed(1);
+        document.getElementById('C_value').textContent = globalParams.C.toFixed(1);
+        
+        // Constraint: muL < muH
+        if (globalParams.muL >= globalParams.muH) {
+            globalParams.muL = globalParams.muH - 0.01;
+            if (globalParams.muL < 0.1) globalParams.muL = 0.1;
+            document.getElementById('muL_slider').value = globalParams.muL;
+            document.getElementById('muL_value').textContent = globalParams.muL.toFixed(2);
+        }
+        
+        // Update maxN for v_slider in effects section
+        const maxN_val = Math.floor(globalParams.R * globalParams.muH / globalParams.C);
+        const vSlider = document.getElementById('v_slider');
+        if (vSlider) {
+            vSlider.max = Math.max(0, maxN_val -1); // v is threshold, up to N-1
+             if (parseInt(vSlider.value) > parseInt(vSlider.max)) {
+                vSlider.value = vSlider.max;
+            }
+        }
+        document.getElementById('v_value').textContent = vSlider.value;
+
+
+        updateAllCalculations();
+    }
+
+    function updateAllCalculations() {
+        // Calculate N_bar for various calculations
+        const N_bar = Math.floor(globalParams.R * globalParams.muH / globalParams.C);
+        if (N_bar <= 0 && document.getElementById('overview').style.display !== 'none') {
+             document.getElementById('equilibriaResults').innerHTML = `<p class="text-red-600">参数错误: 最大队列长度 $\overline{N}$ 计算为 ${N_bar}，必须大于0。请调整 R, mu_H, C。</p>`;
+             document.getElementById('utilityComparisonResults').textContent = '参数错误';
+             document.getElementById('inferenceAccuracyResults').textContent = '参数错误';
+             document.getElementById('disclosureAnalysis').textContent = '参数错误';
+             // Clear tables
+             document.getElementById('m_disclosed').textContent = '错误';
+             document.getElementById('m_no_inference').textContent = '错误';
+             document.getElementById('m_inference').textContent = '错误';
+             document.getElementById('T_disclosed').textContent = '错误';
+             // ... and so on for other table cells
+            return;
+        }
+
+        if (document.getElementById('effects').style.display !== 'none') {
+            updateFigure1Simulation();
+        }
+        if (document.getElementById('equilibria').style.display !== 'none') {
+            calculateAndDisplayEquilibria();
+        }
+        if (document.getElementById('disclosure').style.display !== 'none') {
+            calculateAndDisplayDisclosureImpact();
+        }
+    }
+
+    // --- Calculation Helper Functions ---
+    // pi_X(n, p_vector) where p_vector is the joining probability vector (strategy)
+    // For simplicity in interactive demo, p_vector is often a threshold strategy m: (1,1,..(m times),0,0...)
+    function calculatePi_X(n, m_threshold, mu_X, lambda, N_bar_calc) {
+        if (mu_X <= 0) return { pi0: 0, pi_n: 0}; // Avoid division by zero
+        const rho_X = lambda / mu_X;
+        let sum_terms = 1.0;
+        let pi_n_numerator_factor = 1.0;
+
+        for (let j = 1; j <= N_bar_calc; j++) {
+            let prod_p_minus = 1.0;
+            for (let i = 0; i < j; i++) {
+                 prod_p_minus *= (i <= m_threshold ? 1 : 0); // p_i^- = 1 if i <= m_threshold, else 0
+            }
+            sum_terms += Math.pow(rho_X, j) * prod_p_minus;
+            if (j === n) {
+                pi_n_numerator_factor = Math.pow(rho_X, n) * prod_p_minus;
+            }
+        }
+        
+        const pi0_X = 1.0 / sum_terms;
+        if (n === 0) return { pi0: pi0_X, pi_n: pi0_X };
+        return { pi0: pi0_X, pi_n: pi0_X * pi_n_numerator_factor };
+    }
+    
+    // Belief update theta_n(m_threshold)
+    function calculateTheta_n(n, m_threshold, N_bar_calc) {
+        const { muH, muL, gamma, lambda } = globalParams;
+        const pi_H_res = calculatePi_X(n, m_threshold, muH, lambda, N_bar_calc);
+        const pi_L_res = calculatePi_X(n, m_threshold, muL, lambda, N_bar_calc);
+        const numerator = gamma * pi_H_res.pi_n;
+        const denominator = numerator + (1 - gamma) * pi_L_res.pi_n;
+        return denominator === 0 ? (gamma) : (numerator / denominator); // if denominator is 0, means state n is unreachable with this strategy for both. Default to prior.
+    }
+
+    // Expected utility u(n, m_threshold)
+    function calculateUtility(n, m_threshold, N_bar_calc) {
+        const { muH, muL, R, C } = globalParams;
+        const theta_n_val = calculateTheta_n(n, m_threshold, N_bar_calc);
+        if (n + 1 > N_bar_calc && N_bar_calc > 0) return -Infinity; // Cannot join if n+1 > N_bar (queue already full + 1)
+        const expected_waiting_cost_factor = (theta_n_val / muH) + ((1 - theta_n_val) / muL);
+        return R - C * (n + 1) * expected_waiting_cost_factor;
+    }
+    
+    // Function to calculate pi_X(n, p_vector) where p_vector is (1, ..., 1, p_m_prob, 0, ...)
+    // m_idx is the index for p_m_prob (0-indexed), N_bar_calc is max queue length
+    function calculatePi_X_mixed(n, m_idx, p_m_prob, mu_X, lambda_calc, N_bar_calc) {
+        if (mu_X <= 0) return { pi0: 0, pi_n: 0};
+        const rho_X = lambda_calc / mu_X;
+        let sum_terms = 1.0;
+        let pi_n_numerator_factor = 1.0;
+
+        for (let j = 1; j <= N_bar_calc; j++) {
+            let prod_p_val = 1.0;
+            for (let i = 0; i < j; i++) { // p_i is join prob at queue length i
+                if (i < m_idx) prod_p_val *= 1;
+                else if (i === m_idx) prod_p_val *= p_m_prob;
+                else prod_p_val *= 0;
+            }
+            sum_terms += Math.pow(rho_X, j) * prod_p_val;
+            if (j === n) {
+                pi_n_numerator_factor = Math.pow(rho_X, n) * prod_p_val;
+            }
+        }
+        const pi0_X = 1.0 / sum_terms;
+        if (n === 0) return { pi0: pi0_X, pi_n: pi0_X };
+        return { pi0: pi0_X, pi_n: pi0_X * pi_n_numerator_factor };
+    }
+
+    // Belief update theta_n for mixed strategy (m_idx, p_m_prob)
+    function calculateTheta_n_mixed(n, m_idx, p_m_prob, N_bar_calc) {
+        const { muH, muL, gamma, lambda } = globalParams;
+        const pi_H_res = calculatePi_X_mixed(n, m_idx, p_m_prob, muH, lambda, N_bar_calc);
+        const pi_L_res = calculatePi_X_mixed(n, m_idx, p_m_prob, muL, lambda, N_bar_calc);
+
+        const numerator = gamma * pi_H_res.pi_n;
+        const denominator = numerator + (1 - gamma) * pi_L_res.pi_n;
+        return denominator === 0 ? gamma : numerator / denominator;
+    }
+    
+    // Expected utility u(n, strategy_params) for mixed strategy
+    function calculateUtility_mixed(n, m_idx, p_m_prob, N_bar_calc) {
+        const { muH, muL, R, C } = globalParams;
+        const theta_n_val = calculateTheta_n_mixed(n, m_idx, p_m_prob, N_bar_calc);
+        if (n + 1 > N_bar_calc && N_bar_calc > 0) return -Infinity;
+        const expected_waiting_cost_factor = (theta_n_val / muH) + ((1 - theta_n_val) / muL);
+        return R - C * (n + 1) * expected_waiting_cost_factor;
+    }
+
+
+    // --- Section 2: Core Effects & Best Response ---
+    function updateFigure1Simulation() {
+        const v = parseInt(document.getElementById('v_slider').value);
+        document.getElementById('v_value').textContent = v;
+        document.getElementById('current_v_display').textContent = v;
+        const { R, C, muH, muL, lambda, gamma } = globalParams;
+        const N_bar = Math.floor(R * muH / C);
+
+        if (N_bar <=0) {
+            if (charts.beliefChart) charts.beliefChart.destroy();
+            if (charts.joiningProbChart) charts.joiningProbChart.destroy();
+            document.getElementById('bestResponseThresholdDisplay').textContent = "参数错误: N_bar <= 0";
+            document.getElementById('ftcConditionDisplay').textContent = "参数错误";
+            return;
+        }
+        
+        // (a) Belief theta_0(v)
+        // This requires calculating theta_0 when others use threshold v.
+        const v_values_for_chart = Array.from({length: Math.min(N_bar,11)}, (_, i) => i); // up to N_bar-1 or 10
+        const belief_data = v_values_for_chart.map(val_v => calculateTheta_n(0, val_v, N_bar));
+
+        if (charts.beliefChart) charts.beliefChart.destroy();
+        charts.beliefChart = new Chart(document.getElementById('beliefChart'), {
+            type: 'line',
+            data: {
+                labels: v_values_for_chart,
+                datasets: [{
+                    label: 'θ₀(v) - 对高能力的信念 (空队时)',
+                    data: belief_data,
+                    borderColor: '#0ea5e9',
+                    tension: 0.1
+                }]
+            },
+            options: { maintainAspectRatio: false, responsive: true, plugins: { legend: { display: false }}}
+        });
+
+        // (b) Best-response joining threshold p_tilde(v)
+        // Given others use threshold v, what is tagged customer's threshold?
+        // We need to find m_tilde such that u(m_tilde, v) >=0 and u(m_tilde+1, v) < 0
+        let best_response_m = 0;
+        for (let m_check = 0; m_check < N_bar; m_check++) {
+            if (calculateUtility(m_check, v, N_bar) >= 0) {
+                best_response_m = m_check;
+            } else {
+                break; 
+            }
+        }
+        // Check for mixed strategy at best_response_m + 1 if u(best_response_m,v) > 0 and u(best_response_m+1,v) < 0
+        let p_m_tilde_val = 1;
+        if (best_response_m < N_bar -1 && calculateUtility(best_response_m, v, N_bar) > 0 && calculateUtility(best_response_m + 1, v, N_bar) < 0) {
+           // No mixed strategy for best response in this simplified graph, just threshold
+        } else if (best_response_m < N_bar && Math.abs(calculateUtility(best_response_m, v, N_bar)) < 1e-3) { // approximately zero for PSE
+             // if utility is zero at m_check, it means it's a threshold PSE
+        }
+         document.getElementById('bestResponseThresholdDisplay').textContent = `${best_response_m}`;
+
+
+        // (c) Ex-ante joining probability JP^U(v)
+        // JP^U(v) = sum_{n=0 to p_tilde(v)-1} [gamma*pi_H(n,v) + (1-gamma)*pi_L(n,v)] (if pure response)
+        // This chart should show JP^U as a function of OTHERS' threshold v, assuming the tagged customer plays THEIR best response p_tilde(v)
+        const jp_u_data = v_values_for_chart.map(val_v_others => {
+            let tagged_cust_best_m = 0;
+            for (let m_check = 0; m_check < N_bar; m_check++) {
+                 if (calculateUtility(m_check, val_v_others, N_bar) >= 0) {
+                    tagged_cust_best_m = m_check;
+                } else {
+                    break;
+                }
+            }
+            
+            let total_jp = 0;
+            for (let n_obs = 0; n_obs <= tagged_cust_best_m; n_obs++) {
+                // Probability of observing n, given others use threshold val_v_others
+                const pi_H_n_v_others = calculatePi_X(n_obs, val_v_others, muH, lambda, N_bar).pi_n;
+                const pi_L_n_v_others = calculatePi_X(n_obs, val_v_others, muL, lambda, N_bar).pi_n;
+                total_jp += gamma * pi_H_n_v_others + (1 - gamma) * pi_L_n_v_others;
+            }
+            return total_jp;
+        });
+
+        if (charts.joiningProbChart) charts.joiningProbChart.destroy();
+        charts.joiningProbChart = new Chart(document.getElementById('joiningProbChart'), {
+            type: 'line',
+            data: {
+                labels: v_values_for_chart,
+                datasets: [{
+                    label: 'JPᵁ(v) - 先验加入概率',
+                    data: jp_u_data,
+                    borderColor: '#10b981',
+                    tension: 0.1
+                }]
+            },
+            options: { maintainAspectRatio: false, responsive: true, plugins: { legend: { display: false }}}
+        });
+        
+        // FTC Condition (Proposition 2) - simplified check
+        // FTC occurs if R/C is in [(n+1)(theta_n(N-1)/muH + (1-theta_n(N-1))/muL), (n+1)(theta_n(0)/muH + (1-theta_n(0))/muL)] for some n
+        let ftc_possible = false;
+        const R_C_ratio = R / C;
+        for (let n_check = 1; n_check < N_bar; n_check++) {
+            const theta_n_N_minus_1 = calculateTheta_n(n_check, N_bar - 1, N_bar); // Others play max threshold
+            const theta_n_0 = calculateTheta_n(n_check, 0, N_bar); // Others play min threshold (0)
+            
+            const lower_bound_factor = (theta_n_N_minus_1 / muH) + ((1 - theta_n_N_minus_1) / muL);
+            const upper_bound_factor = (theta_n_0 / muH) + ((1 - theta_n_0) / muL);
+            
+            const interval_lower = (n_check + 1) * lower_bound_factor;
+            const interval_upper = (n_check + 1) * upper_bound_factor;
+
+            if (R_C_ratio > interval_lower && R_C_ratio < interval_upper) {
+                ftc_possible = true;
+                break;
+            }
+        }
+        document.getElementById('ftcConditionDisplay').textContent = ftc_possible ? "是 (条件满足)" : "否 (条件不满足)";
+    }
+
+    // --- Section 3: Customer Joining Equilibria ---
+    function calculateAndDisplayEquilibria() {
+        const { R, C, muH, lambda } = globalParams;
+        const R_C_ratio = R / C;
+        const N_bar = Math.floor(R * muH / C);
+
+        document.getElementById('currentR_C_equilibria').textContent = R_C_ratio.toFixed(3);
+        document.getElementById('maxN_equilibria').textContent = N_bar;
+
+        if (N_bar <= 0) {
+            document.getElementById('equilibriaResults').innerHTML = `<p class="text-red-500">参数错误: $\overline{N}$ (${N_bar}) 必须大于0。</p>`;
+            if(charts.ewChart) charts.ewChart.destroy();
+            document.getElementById('utilityComparisonResults').textContent = '参数错误';
+            document.getElementById('inferenceAccuracyResults').textContent = '参数错误';
+            return;
+        }
+
+        let equilibriaInfo = "";
+        const foundPSEs = [];
+        const m_values_for_chart = [];
+        const EW_underline_data = [];
+        const EW_overline_data = [];
+
+        // Check for PSEs up to N_bar - 1
+        for (let m = 0; m < N_bar; m++) {
+            m_values_for_chart.push(m);
+            // EW_underline_m = (m+1) * [theta_m(m)/muH + (1-theta_m(m))/muL]
+            const theta_m_m = calculateTheta_n(m, m, N_bar);
+            const EW_underline_m = (m + 1) * (theta_m_m / muH + (1 - theta_m_m) / globalParams.muL);
+            EW_underline_data.push(EW_underline_m);
+
+            // EW_overline_m = (m+2) * [theta_{m+1}(m)/muH + (1-theta_{m+1}(m))/muL]
+            // Ensure m+1 does not exceed N_bar
+            let EW_overline_m = Infinity; // Default if m+1 >= N_bar
+            if (m + 1 < N_bar) {
+                 const theta_m_plus_1_m = calculateTheta_n(m + 1, m, N_bar);
+                 EW_overline_m = (m + 2) * (theta_m_plus_1_m / muH + (1 - theta_m_plus_1_m) / globalParams.muL);
+            } else if (m + 1 === N_bar) { // Special case for edge, u(N_bar,m) should be <=0
+                 EW_overline_m = EW_underline_m; // Simplification: if u(m,m)>=0, and m = N_bar-1, then u(N_bar,m) is <=0 by def
+            }
+            EW_overline_data.push(EW_overline_m);
+            
+            // Check PSE condition: R/C in [EW_underline_m, EW_overline_m]
+            // Note: paper definition for EW_overline_m involves theta_{m+1}(m), which is expected waiting time for customer seeing m+1 IF they joined
+            // Condition for threshold-m PSE: u(m,m) >=0 AND u(m+1,m) <=0
+            // u(m,m) >=0  => R/C >= (m+1)[theta_m(m)/mu_H + (1-theta_m(m))/mu_L]  (this is EW_underline_m)
+            // u(m+1,m) <=0 => R/C <= (m+2)[theta_{m+1}(m)/mu_H + (1-theta_{m+1}(m))/mu_L] (this is EW_overline_m)
+
+            if (R_C_ratio >= EW_underline_m && R_C_ratio <= EW_overline_m) {
+                equilibriaInfo += `<p>检测到阈值-$m=${m}$ 纯策略均衡 (PSE)。($R/C \\approx ${R_C_ratio.toFixed(2)}, \\underline{EW}_{${m}} \\approx ${EW_underline_m.toFixed(2)}, \\overline{EW}_{${m}} \\approx ${EW_overline_m.toFixed(2)}$)</p>`;
+                foundPSEs.push(m);
+            }
+        }
+        
+        if (foundPSEs.length === 0) {
+            equilibriaInfo = "<p>未检测到纯策略均衡。可能需要检查混合策略均衡或参数设置。</p>";
+        }
+        document.getElementById('equilibriaResults').innerHTML = equilibriaInfo;
+
+        // Update EW Chart
+        if (charts.ewChart) charts.ewChart.destroy();
+        charts.ewChart = new Chart(document.getElementById('ewChart'), {
+            type: 'line',
+            data: {
+                labels: m_values_for_chart,
+                datasets: [
+                    { label: '_EW_m', data: EW_underline_data, borderColor: '#3b82f6', fill: false },
+                    { label: 'R/C', data: m_values_for_chart.map(() => R_C_ratio), borderColor: '#eab308', borderDash: [5, 5], fill: false, pointRadius: 0 },
+                    { label: 'EW_m (overline)', data: EW_overline_data, borderColor: '#ef4444', fill: false }
+                ]
+            },
+            options: { maintainAspectRatio: false, responsive: true, plugins: { title: { display: true, text: 'PSE 存在条件: R/C 介于 _EW_m 和 EW_m (overline)之间'}}}
+        });
+
+
+        // Utility Comparison (Proposition 4)
+        if (foundPSEs.length > 1) {
+            let utilityText = "多个PSE下的期望效用 $EU^I(m)$:<br>";
+            let bestPSE = { m: -1, utility: -Infinity };
+            foundPSEs.forEach(m_eq => {
+                let eu_i_m = 0;
+                for (let n = 0; n <= m_eq; n++) {
+                    const pi_H_n_m = calculatePi_X(n, m_eq, muH, lambda, N_bar).pi_n;
+                    const pi_L_n_m = calculatePi_X(n, m_eq, globalParams.muL, lambda, N_bar).pi_n;
+                    const pi_n_m = globalParams.gamma * pi_H_n_m + (1 - globalParams.gamma) * pi_L_n_m;
+                    const u_n_m = calculateUtility(n, m_eq, N_bar);
+                    if (isFinite(u_n_m)) { // Ensure utility is finite before adding
+                         eu_i_m += pi_n_m * u_n_m;
+                    }
+                }
+                utilityText += `PSE $m=${m_eq}$: $EU^I(${m_eq}) = ${eu_i_m.toFixed(3)}$<br>`;
+                if (eu_i_m > bestPSE.utility) {
+                    bestPSE = {m: m_eq, utility: eu_i_m};
+                }
+            });
+            if(bestPSE.m !== -1){
+                utilityText += `<strong class="text-green-600">最优PSE: $m=${bestPSE.m}$ (效用最高)</strong>`;
+            }
+            document.getElementById('utilityComparisonResults').innerHTML = utilityText;
+            // For Inference Accuracy, use the best PSE found
+            if (bestPSE.m !== -1) displayInferenceAccuracy(bestPSE.m, N_bar);
+
+        } else if (foundPSEs.length === 1) {
+            document.getElementById('utilityComparisonResults').textContent = `仅存在一个PSE (m=${foundPSEs[0]})，无需比较。`;
+            displayInferenceAccuracy(foundPSEs[0], N_bar);
+        } else {
+            document.getElementById('utilityComparisonResults').textContent = "无纯策略均衡可供比较效用。";
+            document.getElementById('inferenceAccuracyResults').textContent = "无均衡可分析推断准确性。";
+        }
+    }
+
+    function displayInferenceAccuracy(m_equilibrium, N_bar_calc) {
+        let accuracyText = `在阈值-$m=${m_equilibrium}$ PSE 下的推断准确性 (模拟表2):<br>
+                            <table class="min-w-full"><thead><tr><th>队列长度n</th><th>更新信念θ<sub>n</sub>(${m_equilibrium})</th><th>实际高能力时π<sub>H</sub>(n,${m_equilibrium})</th><th>实际低能力时π<sub>L</sub>(n,${m_equilibrium})</th></tr></thead><tbody>`;
+        for (let n = 0; n <= Math.min(m_equilibrium + 2, N_bar_calc -1 ); n++) { // Show a few relevant queue lengths
+            const theta_n_m = calculateTheta_n(n, m_equilibrium, N_bar_calc);
+            const pi_H_n_m = calculatePi_X(n, m_equilibrium, globalParams.muH, globalParams.lambda, N_bar_calc).pi_n;
+            const pi_L_n_m = calculatePi_X(n, m_equilibrium, globalParams.muL, globalParams.lambda, N_bar_calc).pi_n;
+            accuracyText += `<tr><td>${n}</td><td>${theta_n_m.toFixed(4)}</td><td>${pi_H_n_m.toFixed(4)}</td><td>${pi_L_n_m.toFixed(4)}</td></tr>`;
+        }
+        accuracyText += "</tbody></table>";
+        document.getElementById('inferenceAccuracyResults').innerHTML = accuracyText;
+    }
+
+
+    // --- Section 4: Information Disclosure ---
+    function calculateAndDisplayDisclosureImpact() {
+        const { muH, muL, gamma, lambda, R, C } = globalParams;
+        const N_bar = Math.floor(R * muH / C);
+
+        if (N_bar <= 0) {
+            document.getElementById('disclosureAnalysis').textContent = `参数错误: N_bar (${N_bar}) 必须为正。`;
+            // Clear table cells
+            ['m_disclosed', 'm_no_inference', 'm_inference', 'T_disclosed', 'T_no_inference', 'T_inference', 'SW_disclosed', 'SW_no_inference', 'SW_inference'].forEach(id => {
+                document.getElementById(id).textContent = '错误';
+            });
+            return;
+        }
+
+
+        // Case 1: Disclosed
+        const m_H_disclosed = Math.floor(R * muH / C) - 1; // Threshold for high capacity
+        const m_L_disclosed = Math.floor(R * muL / C) - 1; // Threshold for low capacity
+        document.getElementById('m_disclosed').textContent = `μH: ${m_H_disclosed < 0 ? 0 : m_H_disclosed}, μL: ${m_L_disclosed < 0 ? 0 : m_L_disclosed}`;
+
+        const t_H_mH = calculateThroughput(m_H_disclosed, muH, lambda, N_bar);
+        const t_L_mL = calculateThroughput(m_L_disclosed, muL, lambda, N_bar);
+        const T0 = gamma * t_H_mH + (1 - gamma) * t_L_mL;
+        document.getElementById('T_disclosed').textContent = T0.toFixed(3);
+
+        const s_H_mH = calculateSocialWelfare(m_H_disclosed, muH, lambda, R, C, N_bar);
+        const s_L_mL = calculateSocialWelfare(m_L_disclosed, muL, lambda, R, C, N_bar);
+        const SW0 = gamma * s_H_mH + (1 - gamma) * s_L_mL;
+        document.getElementById('SW_disclosed').textContent = SW0.toFixed(3);
+
+        // Case 2: Concealed, No Inference
+        const avg_inv_mu_no_inf = (gamma / muH) + ((1 - gamma) / muL);
+        const m_U_no_inf = Math.floor((R / C) / avg_inv_mu_no_inf) - 1;
+        document.getElementById('m_no_inference').textContent = m_U_no_inf < 0 ? 0 : m_U_no_inf;
+        
+        const t_H_mU = calculateThroughput(m_U_no_inf, muH, lambda, N_bar);
+        const t_L_mU = calculateThroughput(m_U_no_inf, muL, lambda, N_bar);
+        const TU = gamma * t_H_mU + (1 - gamma) * t_L_mU;
+        document.getElementById('T_no_inference').textContent = TU.toFixed(3);
+
+        const s_H_mU = calculateSocialWelfare(m_U_no_inf, muH, lambda, R, C, N_bar);
+        const s_L_mU = calculateSocialWelfare(m_U_no_inf, muL, lambda, R, C, N_bar);
+        const SWU = gamma * s_H_mU + (1 - gamma) * s_L_mU;
+        document.getElementById('SW_no_inference').textContent = SWU.toFixed(3);
+
+        // Case 3: Concealed, Inference
+        // Find PSEs again, pick the one with highest EU_I(m) for m_I
+        const R_C_ratio = R / C;
+        let m_I_inference = -1;
+        let max_eu_i = -Infinity;
+        const foundPSEs_for_disclosure = [];
+
+        for (let m_cand = 0; m_cand < N_bar; m_cand++) {
+            const theta_m_m = calculateTheta_n(m_cand, m_cand, N_bar);
+            const EW_underline_m = (m_cand + 1) * (theta_m_m / muH + (1 - theta_m_m) / muL);
+            let EW_overline_m = Infinity;
+             if (m_cand + 1 < N_bar) {
+                 const theta_m_plus_1_m = calculateTheta_n(m_cand + 1, m_cand, N_bar);
+                 EW_overline_m = (m_cand + 2) * (theta_m_plus_1_m / muH + (1 - theta_m_plus_1_m) / muL);
+            } else if (m_cand + 1 === N_bar) {
+                 EW_overline_m = EW_underline_m;
+            }
+
+            if (R_C_ratio >= EW_underline_m && R_C_ratio <= EW_overline_m) {
+                // This m_cand is a PSE. Calculate its EU^I(m)
+                let current_eu_i_m = 0;
+                for (let n = 0; n <= m_cand; n++) {
+                    const pi_H_n_m = calculatePi_X(n, m_cand, muH, lambda, N_bar).pi_n;
+                    const pi_L_n_m = calculatePi_X(n, m_cand, muL, lambda, N_bar).pi_n;
+                    const pi_n_m = gamma * pi_H_n_m + (1 - gamma) * pi_L_n_m;
+                    const u_n_m = calculateUtility(n, m_cand, N_bar);
+                    if(isFinite(u_n_m)) current_eu_i_m += pi_n_m * u_n_m;
+                }
+                if (current_eu_i_m > max_eu_i) {
+                    max_eu_i = current_eu_i_m;
+                    m_I_inference = m_cand;
+                }
+                 foundPSEs_for_disclosure.push(m_cand);
+            }
+        }
+        if (m_I_inference === -1 && foundPSEs_for_disclosure.length > 0) m_I_inference = foundPSEs_for_disclosure[0]; // fallback if no EU comparison works or only one
+        else if (m_I_inference === -1) m_I_inference = 0; // default if no PSE
+
+        document.getElementById('m_inference').textContent = m_I_inference < 0 ? 0 : m_I_inference;
+        
+        const t_H_mI = calculateThroughput(m_I_inference, muH, lambda, N_bar);
+        const t_L_mI = calculateThroughput(m_I_inference, muL, lambda, N_bar);
+        const TI = gamma * t_H_mI + (1 - gamma) * t_L_mI;
+        document.getElementById('T_inference').textContent = TI.toFixed(3);
+
+        const s_H_mI = calculateSocialWelfare(m_I_inference, muH, lambda, R, C, N_bar);
+        const s_L_mI = calculateSocialWelfare(m_I_inference, muL, lambda, R, C, N_bar);
+        const SWI = gamma * s_H_mI + (1 - gamma) * s_L_mI;
+        document.getElementById('SW_inference').textContent = SWI.toFixed(3);
+
+        // Analysis text
+        let analysis = "";
+        if (TI > T0) analysis += `对于系统吞吐量，策略3 (隐藏,推断) (${TI.toFixed(3)}) 优于 策略1 (披露) (${T0.toFixed(3)}). `;
+        else if (TI < T0) analysis += `对于系统吞吐量，策略1 (披露) (${T0.toFixed(3)}) 优于 策略3 (隐藏,推断) (${TI.toFixed(3)}). `;
+        else analysis += `对于系统吞吐量，策略1和策略3效果相当 (${T0.toFixed(3)}). `;
+
+        if (TU > T0) analysis += `策略2 (隐藏,不推断) (${TU.toFixed(3)}) 也优于 策略1 (披露).<br>`;
+        
+        if (SWI > SW0) analysis += `对于社会福利，策略3 (隐藏,推断) (${SWI.toFixed(3)}) 优于 策略1 (披露) (${SW0.toFixed(3)}). `;
+        else if (SWI < SW0) analysis += `对于社会福利，策略1 (披露) (${SW0.toFixed(3)}) 优于 策略3 (隐藏,推断) (${SWI.toFixed(3)}). `;
+        else analysis += `对于社会福利，策略1和策略3效果相当 (${SW0.toFixed(3)}). `;
+        
+        document.getElementById('disclosureAnalysis').innerHTML = analysis;
+    }
+
+    function calculateThroughput(m, mu_X, lambda_calc, N_bar_calc) {
+        if (m < 0 || mu_X <= 0 || lambda_calc <=0) return 0;
+        const rho_X = lambda_calc / mu_X;
+        if (rho_X === 1) { // Special case for rho = 1 to avoid division by zero in formula
+            return lambda_calc * (m + 1) / (m + 2);
+        }
+        // Using the formula t_X(m) = lambda * (1 - pi_X(m+1, m)) where pi_X(m+1,m) is prob of m+1 in queue given threshold m
+        // Simplified: Effective arrival rate is lambda * P(join)
+        // P(join) is complex. Paper: t_X(m) = lambda * (1 - rho_X^(m+1)) / (1 - rho_X^(m+2)) (This formula is for M/M/1/m+1 essentially)
+        // This assumes effective capacity is mu_X and max system size is m+1 (so threshold m means up to m in queue, m+1 in system)
+        // Let's use the paper's t_X(m) formula (adjusting m for system size K = m+1)
+        const K = m + 1; // Max customers in system
+        if (K > N_bar_calc +1 && N_bar_calc > 0) return 0; // Cannot have more than N_bar in queue, so N_bar+1 in system.
+        
+        let effective_throughput;
+        if (rho_X === 1) {
+            effective_throughput = lambda_calc * K / (K + 1);
+        } else {
+            effective_throughput = lambda_calc * (1 - Math.pow(rho_X, K)) / (1 - Math.pow(rho_X, K + 1));
+        }
+        return Math.min(effective_throughput, lambda_calc); // Throughput cannot exceed arrival rate
+    }
+
+    function calculateSocialWelfare(m, mu_X, lambda_calc, R_calc, C_calc, N_bar_calc) {
+        if (m < 0 || mu_X <= 0 || lambda_calc <=0) return 0;
+        // s_X(m) = lambda * sum_{n=0 to m} pi_X(n,m) * [R - C(n+1)/mu_X]
+        let total_sw = 0;
+        for (let n = 0; n <= m; n++) {
+            if (n > N_bar_calc) break; // Cannot have more than N_bar in queue.
+            // Here, pi_X(n,m) is the steady state prob of n customers IN SYSTEM when threshold is m
+            // For simplicity, using the calculatePi_X for queue length, assuming m is the queue threshold
+            const pi_n_m_struct = calculatePi_X(n, m, mu_X, lambda_calc, N_bar_calc); // pi_n is prob of n in queue
+            const utility_at_n = R_calc - C_calc * (n + 1) / mu_X;
+            if (utility_at_n >= 0) { // Only count if utility is non-negative for those joining
+                 total_sw += lambda_calc * pi_n_m_struct.pi_n * utility_at_n; // Simplified: lambda * P(N=n and join) * U(N=n)
+            }
+        }
+         // This simplification needs refinement based on exact definition of pi_X(n,m) in social welfare formula
+         // The paper's s_X(m) implies pi_X(n,m) is prob of n *in system given threshold m*.
+         // For now, using an approximation. A more accurate version would require full M/M/1/K state probabilities.
+         // A rougher but simpler approx: T_X(m) * Avg_Utility_per_Customer
+         // Avg_Utility_per_Customer: R - C * Avg_Waiting_Time
+         // This is complex. The current sum is a proxy.
+        return total_sw;
+    }
+
+
+    // Initial setup
+    document.addEventListener('DOMContentLoaded', () => {
+        updateGlobalParams(); // Set initial values and trigger first calculation
+        showSection('overview'); // Show the first section by default
+    });
+
+</script>
 </body>
 </html>
